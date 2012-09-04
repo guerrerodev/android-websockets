@@ -181,14 +181,19 @@ public class SocketIOClient {
 
     private void cleanup() {
         try {
-            mClient.disconnect();
-            mClient = null;
+        	if( mClient != null ){
+	            mClient.disconnect();
+	            mClient = null;
+        	}
         }
         catch (IOException e) {
+        	mClient = null;
         }
-        mSendLooper.quit();
-        mSendLooper = null;
-        mSendHandler = null;
+        if( mSendLooper != null ){
+	        mSendLooper.quit();
+	        mSendLooper = null;
+	        mSendHandler = null;
+        }
     }
 
     public void connect() {
