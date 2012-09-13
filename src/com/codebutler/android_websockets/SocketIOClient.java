@@ -4,14 +4,32 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.HashSet;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -42,15 +60,30 @@ public class SocketIOClient {
         mHandler = handler;
     }
 
-    private static String downloadUriAsString(final HttpUriRequest req) throws IOException {
-        AndroidHttpClient client = AndroidHttpClient.newInstance("android-websockets");
+    private static String downloadUriAsString(final HttpUriRequest req) throws IOException, NoSuchAlgorithmException, KeyManagementException {
+
+        URL url = new URL(req.getURI().toString());
+        URLConnection con = url.openConnection();
+        Reader reader = new InputStreamReader(con.getInputStream());
+        String s = "";
+        while (true) {
+            int ch = reader.read();
+            if (ch==-1) {
+                break;
+            }
+            s += (char)ch;
+        }
+        
+        return s;
+        
+        /*AndroidHttpClient client = AndroidHttpClient.newInstance("android-websockets");
         try {
             HttpResponse res = client.execute(req);
             return readToEnd(res.getEntity().getContent());
         }
         finally {
             client.close();
-        }
+        }*/
     }
 
     private static byte[] readToEndAsArray(InputStream input) throws IOException {
@@ -86,7 +119,10 @@ public class SocketIOClient {
     }
 
     private void connectSession() throws URISyntaxException {
-        mClient = new WebSocketClient(new URI(mURI.toString() + "/socket.io/1/websocket/" + mSession), new WebSocketClient.Handler() {
+    	String StringUri = mURI.toString();
+    	if( StringUri.contains("http") ) StringUri = StringUri.replace("http", "ws");
+    	if( StringUri.contains("https") ) StringUri = StringUri.replace("https", "wss");
+        mClient = new WebSocketClient(new URI(StringUri + "/socket.io/1/websocket/" + mSession), new WebSocketClient.Handler() {
             @Override
             public void onMessage(byte[] data) {
                 cleanup();
